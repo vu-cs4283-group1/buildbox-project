@@ -1,6 +1,9 @@
 {
-  "commands": [
-    "echo Hello!",
-    "echo World!"
-  ]
+  "unix": {
+    "commands": [
+      "echo Hello!",
+      "echo World!"
+    ]
+  }
+
 }
