@@ -10,24 +10,21 @@ import argparse
 
 
 def main():
-    pass
+    parse()
 
 
 # Interpret the command line arguments and offer help to the user.
-# Returns the tuple (method, host, path, port)
+# True if this is a client
 def parse():
     # ensure the command line arguments are correct and place them in console_args
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--server",
-                        help="run in server mode")
-    parser.add_argument("--client",
-                        help="the type of HTTP request to be sent, either \"GET\" or \"HEAD\"")
-    parser.add_mutually_exclusive_group()
+    parser = argparse.ArgumentParser(add_help=True)
+    parser.add_argument("mode", choices=["client", "server"], default="client", metavar="mode",
+                        help="either \"client\" (send a job) or \"server\" (receive jobs)")
     console_args = parser.parse_args()
 
     # place the parsed data into a tuple and return it
-    #............
-    return
+    # ............
+    return console_args.mode == "client"
 
 
 def run_server():
