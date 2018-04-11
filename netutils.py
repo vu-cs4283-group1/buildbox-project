@@ -16,7 +16,7 @@ def checksum(data):
     raise NotImplemented
 
 
-def recvall(sock, n):
+def recvall(sock, n) -> bytes:
     """Helper function to receive exactly n bytes.
 
     taken from https://docs.python.org/3/howto/sockets.html
@@ -25,11 +25,11 @@ def recvall(sock, n):
     bytes_recd = 0
     while bytes_recd < n:
         chunk = sock.recv(min(n - bytes_recd, 2048))
-        if chunk == b'':
-            raise EOFError  # reached EOF too early
+        if chunk == b"":
+            return b""  # reached EOF too early, indicate end-of-stream
         chunks.append(chunk)
         bytes_recd = bytes_recd + len(chunk)
-    return b''.join(chunks)
+    return b"".join(chunks)
 
 
 def send_with_header(sock, header=b"", body=b""):
@@ -40,8 +40,8 @@ def send_with_header(sock, header=b"", body=b""):
 
     The intended usage for this function is to send the header as a JSON
     object, containing a "type" field with the basic type of the message,
-    and additional fields as consistent with each "type" value.
-    Limit 2**32 bytes per header, body.
+    and additional fields as consistent with each "type" value. However,
+    this is not enforced here. Limit 2**32 bytes per header, body.
     """
     len_header = len(header)
     len_data = len(body)
@@ -63,7 +63,7 @@ def recv_with_header(sock):
     The intended usage for this function is to load the header as a JSON
     object and to use the "type" field to determine the basic type of
     the message, reading additional fields as consistent with the "type"
-    value.
+    value. However, this is not enforced here.
     """
     sizes = recvall(sock, 8)
     len_header = int.from_bytes(sizes[:4], "big")
@@ -76,7 +76,7 @@ def recv_with_header(sock):
 
 def send_file(sock, filename, send_checksum=False):
     """Use send_with_header to send a file's name, checksum, and contents."""
-    with open(filename, 'rb') as file:  # read binary
+    with open(filename, "rb") as file:  # read binary
         body = file.read()
     metadata = {
         "type": "file",
@@ -85,7 +85,6 @@ def send_file(sock, filename, send_checksum=False):
     }
     header = json.dumps(metadata).encode('utf-8')
     send_with_header(sock, header, body)
-
 
 
 def send_file_list(sock, filelist):
@@ -101,7 +100,7 @@ def send_file_list(sock, filelist):
 def recv_file(sock):
     "Use recv_with_header to receive a file's name, checksum, and contents."
     header, body = recv_with_header(sock)
-    metadata = json.loads(header.decode('utf-8'))
+    metadata = json.loads(header.decode("utf-8"))
     if metadata["type"] != "file":  # type field should be guaranteed
         raise ValueError
     # return a dict with "type", "name", "checksum", "body"
@@ -112,7 +111,7 @@ def recv_file(sock):
 def recv_file_list(sock):
     """Use recv_with_header to receive a list of files."""
     header, body = recv_with_header(sock)
-    metadata = json.loads(header.decode('utf-8'))
+    metadata = json.loads(header.decode("utf-8"))
     if metadata["type"] != "file_list" or len(body) != 0:
         raise ValueError
     # return a dict with "type", "files"

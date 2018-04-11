@@ -6,15 +6,19 @@
 #     unauthorized aid on this assignment.
 
 import argparse
-import buildbox_server
 
-PORT = 3035  # 0xBDB, for buildbox
+PORT = 3035
 LISTENER_COUNT = 5
 
 
 def main():
     is_client = parse()
-    return run_client() if is_client else run_server()
+    if is_client:
+        import client
+        return client.run()
+    else:
+        import server
+        return server.run()
 
 
 # Interpret the command line arguments and offer help to the user.
@@ -38,11 +42,6 @@ def parse() -> bool:
 def run_client():
     connect_to_server()
     authenticate_client()
-
-
-def run_server():
-    server_socket = buildbox_server.setup_server(PORT, LISTENER_COUNT)
-    buildbox_server.start_server(server_socket)
 
 
 def connect_to_server():
