@@ -1,5 +1,5 @@
 # Name:   Josh Wilson, Jerry Jung, Caleb Proffitt
-# Date:   <DATE>
+# Date:   11 April 2018
 # Course: CS 4283 - Vanderbilt University
 # Ver:    Python 3.6.4
 # Honor statement: We have neither given nor received
@@ -66,18 +66,16 @@ def recv_with_header(sock):
     value.
     """
     sizes = recvall(sock, 8)
-    assert(sizes is not None)
     len_header = int.from_bytes(sizes[:4], "big")
     len_data = int.from_bytes(sizes[4:], "big")
     msg = recvall(sock, len_header + len_data)
-    assert(msg is not None)
     header = msg[:len_header]
     body = msg[len_header:]
     return header, body
 
 
-# uses send_with_header to send a file's name, checksum, and contents
 def send_file(sock, filename, send_checksum=False):
+    """Use send_with_header to send a file's name, checksum, and contents."""
     with open(filename, 'rb') as file:  # read binary
         body = file.read()
     metadata = {
@@ -85,13 +83,13 @@ def send_file(sock, filename, send_checksum=False):
         "name": filename,
         "checksum": checksum(body) if send_checksum else None
     }
-
     header = json.dumps(metadata).encode('utf-8')
     send_with_header(sock, header, body)
 
 
-# uses send_with_header to send a list of files
+
 def send_file_list(sock, filelist):
+    """Use send_with_header to send a list of files."""
     metadata = {
         "type": "file_list",
         "files": filelist
@@ -100,8 +98,8 @@ def send_file_list(sock, filelist):
     send_with_header(sock, header)
 
 
-# uses recv_with_header to receive a file's name, checksum, and contents
 def recv_file(sock):
+    "Use recv_with_header to receive a file's name, checksum, and contents."
     header, body = recv_with_header(sock)
     metadata = json.loads(header.decode('utf-8'))
     if metadata["type"] != "file":  # type field should be guaranteed
@@ -111,8 +109,8 @@ def recv_file(sock):
     return metadata
 
 
-# uses recv_with_header to receive a list of files
 def recv_file_list(sock):
+    """Use recv_with_header to receive a list of files."""
     header, body = recv_with_header(sock)
     metadata = json.loads(header.decode('utf-8'))
     if metadata["type"] != "file_list" or len(body) != 0:
