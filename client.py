@@ -6,6 +6,8 @@
 #     unauthorized aid on this assignment.
 
 import socket
+import netutils
+import fileutils
 
 TIMEOUT = 60.0
 PORT = 0xBDB0  # for buildbox, just for kicks
@@ -15,6 +17,21 @@ def run():
     """The entry point for client mode."""
 
     sock = connect()
+    #Assumed protocol:
+    #   on connection server does nothing.
+    #   on recieving a file list, server returns 2 things in this order
+    #       - a list of missing files
+    #       - checksums for existing files
+    #   on recieving a file, server returns nothing
+    #   on building server returns ... ? a single message with relevant data presumably
+    inform_filenames(sock)
+    missing = netutils.recv_file_list(sock)["files"]
+    check = netutils.recv_checksums(sock)
+    changed = fileutils.verify_checksums(check["files"], check["sums"])
+    send_files(missing)
+    send_files(changed)
+    #no need to send any "done with syncing type thing
+    #just send a build command.
     pass
 
 
@@ -25,6 +42,20 @@ def connect(host):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.connect((host, PORT))
     return sock
+
+
+def inform_filenames(sock):
+    #get file list
+    filenames = []
+    #if we just want to do one file, or for testing, just modify the above
+    #I'll add the directory walking later - Caleb
+
+    netutils.send_file_list(sock, filenames)
+
+
+def send_files(files):
+    for f in files:
+        sync_file(f)
 
 
 def sync_file(filename):

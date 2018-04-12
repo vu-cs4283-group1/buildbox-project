@@ -97,6 +97,24 @@ def send_file_list(sock, filelist):
     send_with_header(sock, header)
 
 
+def send_file_checksums(sock, filelist, checksumList):
+    """Use send_with_header to send a list of files."""
+    metadata = {
+        "type": "checksums",
+        "files": filelist,
+        "sums": checksumList
+    }
+    header = json.dumps(metadata).encode('utf-8')
+    send_with_header(sock, header)
+
+def recv_unknown(sock):
+    #for use when program can recv one of several things
+    header, body = recv_with_header(sock)
+    metadata = json.loads(header.decode("utf-8"))
+    metadata["body"] = body
+    return metadata
+
+
 def recv_file(sock):
     "Use recv_with_header to receive a file's name, checksum, and contents."
     header, body = recv_with_header(sock)

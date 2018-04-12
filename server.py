@@ -7,6 +7,8 @@
 
 import socket
 import threading
+import netutils
+import fileutils
 
 TIMEOUT = 60.0
 PORT = 0xBDB0  # for buildbox, just for kicks
@@ -72,7 +74,35 @@ def handle_client(sock, address):
           requests file if nonexistent or different, or simply acknowledges
         * Client sends file if requested
     """
-    raise NotImplemented
+    while True:
+        #use socket exceptions to break loop or terminate thread once socket is closed?
+        data = netutils.recv_unknown(sock)
+        if data["type"] == "file":
+            #save to disk
+            raise NotImplemented
+        elif data["type"] == "file_list":
+            files = data["files"]
+            fileutils.delete_extra_files(files)
+            missing = fileutils.get_missing_files(files)
+            not_missing = [f for f in files if f not in missing]
+            inform_missing(sock, missing)
+            inform_checksums((sock, not_missing))
+        else:
+            raise NotImplemented #or a different error
+
+
+def inform_missing(sock, files):
+    netutils.send_file_list(sock, files)
+
+
+def inform_checksums(sock, filenames):
+    checksums = [fileutils.file_checksum(f) for f in filenames]
+    netutils.send_file_checksums(sock, filenames, checksums)
+
+
+def recv_filenames(sock):
+    data = netutils.recv_file_list(sock)
+    return data["files"]
 
 
 # Shut down and close the given socket.
