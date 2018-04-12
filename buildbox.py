@@ -7,9 +7,6 @@
 
 import argparse
 
-PORT = 3035
-LISTENER_COUNT = 5
-
 
 def main():
     is_client = parse()
@@ -29,31 +26,7 @@ def parse() -> bool:
     parser.add_argument("mode", choices=["client", "server"], default="client", metavar="mode",
                         help="either 'client' (send a job) or 'server' (receive jobs)")
     console_args = parser.parse_args()
-
-    # place the parsed data into a tuple and return it
-    # ............
     return console_args.mode == "client"
-
-
-
-
-
-
-def run_client():
-    connect_to_server()
-    authenticate_client()
-
-
-def connect_to_server():
-    pass
-
-
-
-def authenticate_client():
-    pass
-
-
-
 
 
 # run the "main" function

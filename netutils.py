@@ -102,7 +102,7 @@ def recv_file(sock):
     header, body = recv_with_header(sock)
     metadata = json.loads(header.decode("utf-8"))
     if metadata["type"] != "file":  # type field should be guaranteed
-        raise ValueError
+        raise ValueError("Expected file, got {}".format(metadata["type"]))
     # return a dict with "type", "name", "checksum", "body"
     metadata["body"] = body
     return metadata
@@ -113,6 +113,6 @@ def recv_file_list(sock):
     header, body = recv_with_header(sock)
     metadata = json.loads(header.decode("utf-8"))
     if metadata["type"] != "file_list" or len(body) != 0:
-        raise ValueError
+        raise ValueError("Expected file_list, got {}".format(metadata["type"]))
     # return a dict with "type", "files"
     return metadata
