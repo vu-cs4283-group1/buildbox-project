@@ -26,7 +26,7 @@ def run():
     #   on building server returns ... ? a single message with relevant data presumably
     inform_filenames(sock)
     missing = netutils.recv_file_list(sock)["files"]
-    check = netutils.recv_checksums(sock)
+    check = netutils.recv_file_checksums(sock)
     changed = fileutils.verify_checksums(check["files"], check["sums"])
     send_files(missing)
     send_files(changed)

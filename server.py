@@ -85,7 +85,7 @@ def handle_client(sock, address):
             missing = fileutils.get_missing_files(files)
             not_missing = [f for f in files if f not in missing]
             inform_missing(sock, missing)
-            inform_checksums((sock, not_missing))
+            inform_checksums(sock, not_missing)
         else:
             raise NotImplemented #or a different error
 
