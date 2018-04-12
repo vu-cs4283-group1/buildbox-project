@@ -98,7 +98,7 @@ def send_file_list(sock, filelist):
 
 
 def send_file_checksums(sock, filelist, checksumList):
-    """Use send_with_header to send a list of files."""
+    """Use send_with_header to send a list of files and their checksums."""
     metadata = {
         "type": "checksums",
         "files": filelist,
@@ -133,4 +133,14 @@ def recv_file_list(sock):
     if metadata["type"] != "file_list" or len(body) != 0:
         raise ValueError("Expected file_list, got {}".format(metadata["type"]))
     # return a dict with "type", "files"
+    return metadata
+
+
+def recv_file_checksums(sock):
+    """Use recv_with_header to receive a list of files and their checksums."""
+    header, body = recv_with_header(sock)
+    metadata = json.loads(header.decode("utf-8"))
+    if metadata["type"] != "checksums" or len(body) != 0:
+        raise ValueError("Expected file_list, got {}".format(metadata["type"]))
+    # return a dict with "type", "checksums"
     return metadata
