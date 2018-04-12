@@ -7,6 +7,7 @@
 #
 # Description: This file includes utility functions for interacting with the filesystem
 
+import os
 import hashlib
 
 def get_contents(path):
@@ -20,13 +21,19 @@ def write_file(path, contents):
 def file_checksum(path):
     return hashlib.md5(get_contents(path)).hexdigest()
 
+def list_all_files(path):
+    all = []
+    for path, dirs, files in os.walk(path):
+        for file in files:
+            all.append(path + "\\" + file)
+    return all
+
 def delete_extra_files(files):
     #deletes any files in the build directory that are not in the given list
     raise NotImplemented
 
 def get_missing_files(files):
     raise NotImplemented
-
 
 def verify_checksums(files, sums):
     #filters out unchanged files and returns a list of files whose checksums differ from disk

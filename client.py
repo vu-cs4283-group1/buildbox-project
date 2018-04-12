@@ -45,11 +45,7 @@ def connect(host):
 
 
 def inform_filenames(sock):
-    #get file list
-    filenames = []
-    #if we just want to do one file, or for testing, just modify the above
-    #I'll add the directory walking later - Caleb
-
+    filenames = fileutils.list_all_files("buildtest")
     netutils.send_file_list(sock, filenames)
 
 
