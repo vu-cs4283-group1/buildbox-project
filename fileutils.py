@@ -13,6 +13,10 @@ def get_contents(path):
     with open(path, "rb") as file:
         return file.read()
 
+def write_file(path, contents):
+    with open(path, "wb") as file:
+        file.write(contents)
+
 def file_checksum(path):
     return hashlib.md5(get_contents(path)).hexdigest()
 

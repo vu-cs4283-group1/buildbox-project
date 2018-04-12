@@ -107,6 +107,7 @@ def send_file_checksums(sock, filelist, checksumList):
     header = json.dumps(metadata).encode('utf-8')
     send_with_header(sock, header)
 
+
 def recv_unknown(sock):
     #for use when program can recv one of several things
     header, body = recv_with_header(sock)

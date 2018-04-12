@@ -78,8 +78,7 @@ def handle_client(sock, address):
         #use socket exceptions to break loop or terminate thread once socket is closed?
         data = netutils.recv_unknown(sock)
         if data["type"] == "file":
-            #save to disk
-            raise NotImplemented
+            fileutils.write_file(data["name"], data["body"])
         elif data["type"] == "file_list":
             files = data["files"]
             fileutils.delete_extra_files(files)
