@@ -28,8 +28,8 @@ def run():
     missing = netutils.recv_file_list(sock)["files"]
     check = netutils.recv_file_checksums(sock)
     changed = fileutils.verify_checksums(check["files"], check["sums"])
-    send_files(missing)
-    send_files(changed)
+    send_files(sock, missing)
+    send_files(sock, changed)
     #no need to send any "done with syncing type thing
     #just send a build command.
     pass
@@ -45,13 +45,13 @@ def connect(host):
 
 
 def inform_filenames(sock):
-    filenames = fileutils.list_all_files("buildtest")
+    filenames = fileutils.list_all_files()
     netutils.send_file_list(sock, filenames)
 
 
-def send_files(files):
+def send_files(sock, files):
     for f in files:
-        sync_file(f)
+        netutils.send_file(sock, f)
 
 
 def sync_file(filename):
