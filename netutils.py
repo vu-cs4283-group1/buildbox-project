@@ -11,11 +11,6 @@
 import json
 
 
-def checksum(data):
-    # TODO
-    raise NotImplemented
-
-
 def recvall(sock, n) -> bytes:
     """Helper function to receive exactly n bytes.
 
@@ -74,35 +69,28 @@ def recv_with_header(sock):
     return header, body
 
 
-def send_file(sock, filename, send_checksum=False):
+def send_file(sock, filename, checksum=None):
     """Use send_with_header to send a file's name, checksum, and contents."""
     with open(filename, "rb") as file:  # read binary
         body = file.read()
     metadata = {
         "type": "file",
         "name": filename,
-        "checksum": checksum(body) if send_checksum else None
+        "checksum": checksum
     }
     header = json.dumps(metadata).encode('utf-8')
     send_with_header(sock, header, body)
 
 
-def send_file_list(sock, filelist):
-    """Use send_with_header to send a list of files."""
+def send_file_list(sock, filelist, checksumlist=None):
+    """Use send_with_header to send a list of files (and optionally, checksums).
+    """
+    if checksumlist is not None:
+        assert len(filelist) == len(checksumlist)
     metadata = {
         "type": "file_list",
-        "files": filelist
-    }
-    header = json.dumps(metadata).encode('utf-8')
-    send_with_header(sock, header)
-
-
-def send_file_checksums(sock, filelist, checksumList):
-    """Use send_with_header to send a list of files and their checksums."""
-    metadata = {
-        "type": "checksums",
         "files": filelist,
-        "sums": checksumList
+        "checksums": checksumlist
     }
     header = json.dumps(metadata).encode('utf-8')
     send_with_header(sock, header)
@@ -133,15 +121,14 @@ def recv_file_list(sock):
     metadata = json.loads(header.decode("utf-8"))
     if metadata["type"] != "file_list" or len(body) != 0:
         raise ValueError("Expected file_list, got {}".format(metadata["type"]))
-    # return a dict with "type", "files"
+    # return a dict with "type", "files", "checksums" (optionally None)
     return metadata
 
 
 def recv_file_checksums(sock):
     """Use recv_with_header to receive a list of files and their checksums."""
-    header, body = recv_with_header(sock)
-    metadata = json.loads(header.decode("utf-8"))
-    if metadata["type"] != "checksums" or len(body) != 0:
-        raise ValueError("Expected file_list, got {}".format(metadata["type"]))
-    # return a dict with "type", "checksums"
+    metadata = recv_file_list(sock)
+    if metadata["checksums"] is None:
+        raise ValueError("Expected checksums, got None")
+    # return a dict with "type", "files", "checksums"
     return metadata

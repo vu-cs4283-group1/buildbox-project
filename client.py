@@ -13,12 +13,11 @@ TIMEOUT = 60.0
 PORT = 0xBDB0  # for buildbox, just for kicks
 
 
-def run():
+def run(host):
     """The entry point for client mode."""
 
-    default_ip = "127.0.0.1"
-    sock = connect(default_ip)
-    #Assumed protocol:
+    sock = connect(host)
+    # Assumed protocol:
     #   on connection server does nothing.
     #   on recieving a file list, server returns 2 things in this order
     #       - a list of missing files
@@ -28,7 +27,7 @@ def run():
     inform_filenames(sock)
     missing = netutils.recv_file_list(sock)["files"]
     check = netutils.recv_file_checksums(sock)
-    changed = fileutils.verify_checksums(check["files"], check["sums"])
+    changed = fileutils.verify_checksums(check["files"], check["checksums"])
     send_files(sock, missing)
     send_files(sock, changed)
     #no need to send any "done with syncing type thing

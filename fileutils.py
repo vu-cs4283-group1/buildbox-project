@@ -59,10 +59,11 @@ def get_missing_files(files):
     return missing
 
 
-def verify_checksums(files, sums):
-    #filters out unchanged files and returns a list of files whose checksums differ from disk
+def verify_checksums(files, checksums):
+    # filters out unchanged files and returns a list of files
+    # whose checksums differ from disk
     changed = []
-    for f, sum in zip(files,sums):
-        if file_checksum(f) != sum:
+    for f, checksum in zip(files, checksums):
+        if file_checksum(f) != checksum:
             changed.append(f)
     return changed

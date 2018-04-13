@@ -96,7 +96,7 @@ def inform_missing(sock, files):
 
 def inform_checksums(sock, filenames):
     checksums = [fileutils.file_checksum(f) for f in filenames]
-    netutils.send_file_checksums(sock, filenames, checksums)
+    netutils.send_file_list(sock, filenames, checksums)
 
 
 def recv_filenames(sock):
