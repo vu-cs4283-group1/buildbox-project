@@ -81,7 +81,7 @@ def handle_client(sock, address):
             fileutils.write_file(data["name"], data["body"])
         elif data["type"] == "file_list":
             files = data["files"]
-            fileutils.delete_extra_files(files)
+            fileutils.delete_extra_files("buildtest", files)
             missing = fileutils.get_missing_files(files)
             not_missing = [f for f in files if f not in missing]
             inform_missing(sock, missing)

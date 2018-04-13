@@ -16,7 +16,8 @@ PORT = 0xBDB0  # for buildbox, just for kicks
 def run():
     """The entry point for client mode."""
 
-    sock = connect()
+    default_ip = "127.0.0.1"
+    sock = connect(default_ip)
     #Assumed protocol:
     #   on connection server does nothing.
     #   on recieving a file list, server returns 2 things in this order
