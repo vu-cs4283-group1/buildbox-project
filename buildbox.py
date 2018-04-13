@@ -9,24 +9,28 @@ import argparse
 
 
 def main():
-    is_client = parse()
-    if is_client:
+    console_args = parse()
+    print(console_args)
+    if console_args.mode == "client":
         import client
-        return client.run()
+        return client.run(console_args.host)
     else:
         import server
         return server.run()
 
 
-# Interpret the command line arguments and offer help to the user.
-# True if this is a client, false if this is a server
-def parse() -> bool:
+def parse():
+    """Interpret the command line arguments and offer help to the user.
+
+    True if this is a client, false if this is a server.
+    """
     # ensure the command line arguments are correct and place them in console_args
     parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument("mode", choices=["client", "server"], default="client", metavar="mode",
-                        help="either 'client' (send a job) or 'server' (receive jobs)")
-    console_args = parser.parse_args()
-    return console_args.mode == "client"
+    subparsers = parser.add_subparsers(title="modes", dest="mode")
+    client_parser = subparsers.add_parser("client")
+    client_parser.add_argument("host", help="the host running buildbox in server mode")
+    server_parser = subparsers.add_parser("server")
+    return parser.parse_args()
 
 
 # run the "main" function
