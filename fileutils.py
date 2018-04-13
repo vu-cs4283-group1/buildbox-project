@@ -10,39 +10,54 @@
 import os
 import hashlib
 
+
 BUILD_DIR = "buildtest"
 
+slash = "\\" if os.name == "nt" else "/"
+
+
+def os_path(path):
+    return path.replace("/", slash)
+
+
+def net_path(path):
+    return path.replace(slash, "/")
+
+
 def get_contents(path):
-    with open(path, "rb") as file:
+    with open(os_path(path), "rb") as file:
         return file.read()
 
+
 def write_file(path, contents):
-    with open(path, "wb") as file:
+    with open(os_path(path), "wb") as file:
         file.write(contents)
+
 
 def file_checksum(path):
     return hashlib.md5(get_contents(path)).hexdigest()
 
+
 def list_all_files(path = BUILD_DIR):
     all = []
-    for path, dirs, files in os.walk(path):
+    for path, dirs, files in os.walk(os_path(path)):
         for file in files:
-            all.append(path + "\\" + file)
+            all.append(net_path(path) + "/" + file)
     return all
 
+
 def delete_extra_files(files):
-    #just going to do nothing since I haven't tested the code all together
-    #   and I don't want to accidentally delete a bunch of files if something is wrong somewhere
-    pass
-    #on_disk = list_all_files(BUILD_DIR)
-    #for f in on_disk:
-    #    if f not in files:
-    #        os.remove(f)
+    on_disk = list_all_files(BUILD_DIR)
+    for f in on_disk:
+        if f not in files:
+            os.remove(os_path(f))
+
 
 def get_missing_files(files):
     on_disk = list_all_files()
     missing = [f for f in files if f not in on_disk]
     return missing
+
 
 def verify_checksums(files, sums):
     #filters out unchanged files and returns a list of files whose checksums differ from disk
