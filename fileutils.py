@@ -60,22 +60,3 @@ def verify_checksums(files, sums):
         if file_checksum(f) != sum:
             changed.append(f)
     return changed
-
-
-def execute_all(command_list):
-    for command in command_list:
-        return_code = execute_command(command)
-        if return_code != 0:
-            return return_code
-    return 0
-
-
-def execute_command(command):
-    try:
-        # synchronously run the given command in a shell with a 30 second timeout
-        result = subprocess.run(command, shell=True, stderr=subprocess.STDOUT, timeout=30)
-    except subprocess.TimeoutExpired:
-        print("Bad command: {}: "
-              "Timed out".format(command))
-        return 124  # standard unix timeout exit code
-    return result.returncode  # 0 on success
