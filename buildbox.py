@@ -10,7 +10,6 @@ import argparse
 
 def main():
     console_args = parse()
-    print(console_args)
     if console_args.mode == "client":
         import client
         return client.run(console_args.host)

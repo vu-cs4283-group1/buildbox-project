@@ -9,6 +9,7 @@
 #     across a socket.
 
 import json
+import socket
 
 
 def recvall(sock, n) -> bytes:
@@ -19,9 +20,12 @@ def recvall(sock, n) -> bytes:
     chunks = []
     bytes_recd = 0
     while bytes_recd < n:
-        chunk = sock.recv(min(n - bytes_recd, 2048))
+        try:
+            chunk = sock.recv(min(n - bytes_recd, 2048))
+        except socket.timeout:
+            chunk = b""
         if chunk == b"":
-            return b""  # reached EOF too early, indicate end-of-stream
+            raise EOFError()  # reached EOF too early, indicate end-of-stream
         chunks.append(chunk)
         bytes_recd = bytes_recd + len(chunk)
     return b"".join(chunks)

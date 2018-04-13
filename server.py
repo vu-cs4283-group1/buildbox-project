@@ -67,27 +67,34 @@ def start(server_socket):
 
 
 def handle_client(sock, address):
-    """For now, we will only support file mirroring. This will be
-    done for each file as a series of exchanges:
-        * Client notifies server of file, with checksum
-        * Server tests for file's existence, compares checksum,
-          requests file if nonexistent or different, or simply acknowledges
-        * Client sends file if requested
+    """The function that handles each individual connection.
+
+    Protocol:
+    * on connection server does nothing.
+    * on receiving a file list, server returns 2 things in this order
+        - a list of missing files
+        - checksums for existing files
+    * on receiving a file, server returns nothing
+    * on building server returns a single message with relevant data, presumably
     """
-    while True:
-        #use socket exceptions to break loop or terminate thread once socket is closed?
-        data = netutils.recv_unknown(sock)
-        if data["type"] == "file":
-            fileutils.write_file(data["name"], data["body"])
-        elif data["type"] == "file_list":
-            files = data["files"]
-            fileutils.delete_extra_files(files)
-            missing = fileutils.get_missing_files(files)
-            not_missing = [f for f in files if f not in missing]
-            inform_missing(sock, missing)
-            inform_checksums(sock, not_missing)
-        else:
-            raise NotImplemented #or a different error
+
+    with sock:
+        # do the following for each connection
+        print("Handling {}".format(address))
+        files = netutils.recv_file_list(sock)["files"]
+        missing = fileutils.get_missing_files(files)
+        not_missing = [f for f in files if f not in missing]
+        inform_missing(sock, missing)
+        inform_checksums(sock, not_missing)
+
+        try:
+            file = netutils.recv_file(sock)
+            while file["type"] == "file":
+                fileutils.write_file(file["name"], file["body"])
+                file = netutils.recv_file(sock)
+        except EOFError:
+            pass
+        fileutils.delete_extra_files(files)
 
 
 def inform_missing(sock, files):
@@ -102,9 +109,3 @@ def inform_checksums(sock, filenames):
 def recv_filenames(sock):
     data = netutils.recv_file_list(sock)
     return data["files"]
-
-
-# Shut down and close the given socket.
-def cleanup(sock):
-    sock.shutdown(socket.SHUT_RDWR)
-    sock.close()

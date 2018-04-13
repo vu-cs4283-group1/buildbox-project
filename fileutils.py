@@ -30,6 +30,7 @@ def get_contents(path):
 
 
 def write_file(path, contents):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(os_path(path), "wb") as file:
         file.write(contents)
 
@@ -39,18 +40,18 @@ def file_checksum(path):
 
 
 def list_all_files(path = BUILD_DIR):
-    all = []
-    for path, dirs, files in os.walk(os_path(path)):
+    local_files = []
+    for path, dirs, files in os.walk(os_path(path), followlinks=True):
         for file in files:
-            all.append(net_path(path) + "/" + file)
-    return all
+            local_files.append(net_path(path) + "/" + file)
+    return local_files
 
 
 def delete_extra_files(files):
-    on_disk = list_all_files(BUILD_DIR)
-    for f in on_disk:
-        if f not in files:
-            os.remove(os_path(f))
+    local_files = list_all_files(BUILD_DIR)
+    extra = [f for f in local_files if f not in files]
+    for f in extra:
+        os.remove(f)
 
 
 def get_missing_files(files):
