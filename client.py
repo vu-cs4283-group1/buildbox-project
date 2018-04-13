@@ -33,6 +33,7 @@ def run(host):
         changed = fileutils.verify_checksums(check["files"], check["checksums"])
         send_files(sock, missing)
         send_files(sock, changed)
+        sock.shutdown()
         # TODO no need to send any "done syncing" message, just a build command.
 
 
