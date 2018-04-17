@@ -13,7 +13,7 @@ import fileutils
 TIMEOUT = 60.0
 PORT = 0xBDB0  # for buildbox, just for kicks
 LISTENER_COUNT = 5
-DEBUG = False
+
 
 def run():
     """The entry point for server mode."""
@@ -75,8 +75,10 @@ def handle_client(sock, address):
     * on receiving a file list, server returns 2 things in this order
         - a list of missing files
         - checksums for existing files
-    * on receiving a file, server returns nothing
-    * on building server returns a single message with relevant data, presumably
+    * server receives a set of incoming files
+    * on receiving each file, server removes filename from set of incoming files
+    * when all files have been received, server starts build
+    * on building server returns a single message with relevant data
     """
 
     with sock:
@@ -89,13 +91,10 @@ def handle_client(sock, address):
         files = netutils.recv_file_list(sock)["files"]
         # determine which files the server is missing
         missing = fileutils.get_missing_files(files, root)
-        if DEBUG:
-            print("Missing: {}".format("\n".join(missing)))
         not_missing = list(set(files) - set(missing))
-        if DEBUG:
-            print("Have: {}".format("\n".join(missing)))
         # inform the client of missing files and the checksums of existing files
         inform_missing(sock, missing)
+        # send checksums of existing files
         inform_checksums(sock, not_missing, root)
 
         # receive the list of files the client is about to send
@@ -112,6 +111,7 @@ def handle_client(sock, address):
 
         # send confirmation to the client. TODO run client code
         netutils.send_text(sock, "All files received, done.")
+
         fileutils.delete_extra_files(files)
         print("All files received, done.")
 

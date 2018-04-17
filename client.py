@@ -21,18 +21,20 @@ def run(host):
     * client receives 2 things in this order
         - a list of missing files
         - checksums for existing files
+    * client sends a list of files to send
     * client sends all missing and changed files
-    * client receives a single message with relevant data, presumably
+    * client receives a single message with relevant data
     """
-
+    root = "."  # the directory to synchronize
     sock = connect(host)
     with sock:
-        inform_filenames(sock)
+        # inform the server of local files
+        inform_locals(sock, root)
         # determine which files the server is missing
         missing = netutils.recv_file_list(sock)["files"]
         # determine which files are on the server but differ from the client
         check = netutils.recv_file_checksums(sock)
-        changed = fileutils.verify_checksums(check["files"], check["checksums"], ".")
+        changed = fileutils.verify_checksums(check["files"], check["checksums"], root)
         # create and send a list of files to be sent
         to_send = missing + changed
         netutils.send_file_list(sock, to_send)
@@ -54,6 +56,5 @@ def connect(host):
     return sock
 
 
-def inform_filenames(sock):
-    filenames = fileutils.list_all_files(".")
-    netutils.send_file_list(sock, filenames)
+def inform_locals(sock, root):
+    netutils.send_file_list(sock, fileutils.list_all_files(root))
