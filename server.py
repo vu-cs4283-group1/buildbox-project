@@ -81,17 +81,18 @@ def handle_client(sock, address):
     with sock:
         # do the following for each connection
         print("Handling {}".format(address))
-        files = netutils.recv_file_list(sock)["files"]
-        missing = fileutils.get_missing_files(files)
+        files = netutils.recv_file_list(sock)["files"]                  # Receive file list from client
+        missing = fileutils.get_missing_files(files)                    # Find client's missing file
         not_missing = [f for f in files if f not in missing]
-        inform_missing(sock, missing)
-        inform_checksums(sock, not_missing)
+        inform_missing(sock, missing)                                   # Send file list of missing files
+        inform_checksums(sock, not_missing)                             # Send checksum of present files
 
         try:
-            file = netutils.recv_file(sock)
-            while file["type"] == "file":
-                fileutils.write_file(file["name"], file["body"])
+            receive_files = netutils.recv_file_list(sock)["files"]      # Receive file list from client
+            for i in range(len(receive_files)):
                 file = netutils.recv_file(sock)
+                fileutils.write_file(file["name"], file["body"])
+
         except EOFError:
             pass
         fileutils.delete_extra_files(files)
