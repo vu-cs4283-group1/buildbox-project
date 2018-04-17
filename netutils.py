@@ -100,6 +100,15 @@ def send_file_list(sock, filelist, checksumlist=None):
     send_with_header(sock, header)
 
 
+def send_text(sock, text : str):
+    metadata = {
+        "type": "text"
+    }
+    header = json.dumps(metadata).encode('utf-8')
+    body = text.encode('utf-8')
+    send_with_header(sock, header, body)
+
+
 def recv_unknown(sock):
     #for use when program can recv one of several things
     header, body = recv_with_header(sock)
@@ -136,3 +145,13 @@ def recv_file_checksums(sock):
         raise ValueError("Expected checksums, got None")
     # return a dict with "type", "files", "checksums"
     return metadata
+
+
+def recv_text(sock):
+    """Use recv_with_header to receive plain text."""
+    header, body = recv_with_header(sock)
+    metadata = json.loads(header.decode('utf-8'))
+    if metadata["type"] != "text":
+        raise ValueError("Expected text, got {}".format(metadata["type"]))
+    # return a str, unlike most other recv_* methods
+    return body.decode('utf-8')

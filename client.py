@@ -28,13 +28,21 @@ def run(host):
     sock = connect(host)
     with sock:
         inform_filenames(sock)
+        # determine which files the server is missing
         missing = netutils.recv_file_list(sock)["files"]
+        # determine which files are on the server but differ from the client
         check = netutils.recv_file_checksums(sock)
-        changed = fileutils.verify_checksums(check["files"], check["checksums"])
-        send_files(sock, missing)
-        send_files(sock, changed)
-        sock.shutdown()
-        # TODO no need to send any "done syncing" message, just a build command.
+        changed = fileutils.verify_checksums(check["files"], check["checksums"], ".")
+        # create and send a list of files to be sent
+        to_send = missing + changed
+        netutils.send_file_list(sock, to_send)
+        # send the actual files, order doesn't matter
+        for file in to_send:
+            print("Sending file:", file)
+            netutils.send_file(sock, file)
+
+        # display the final response from the server
+        print("remote:", netutils.recv_text(sock))
 
 
 def connect(host):
@@ -47,10 +55,5 @@ def connect(host):
 
 
 def inform_filenames(sock):
-    filenames = fileutils.list_all_files()
+    filenames = fileutils.list_all_files(".")
     netutils.send_file_list(sock, filenames)
-
-
-def send_files(sock, files):
-    for f in files:
-        netutils.send_file(sock, f)

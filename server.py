@@ -13,7 +13,7 @@ import fileutils
 TIMEOUT = 60.0
 PORT = 0xBDB0  # for buildbox, just for kicks
 LISTENER_COUNT = 5
-
+DEBUG = False
 
 def run():
     """The entry point for server mode."""
@@ -38,6 +38,7 @@ def setup():
         raise
     # become a server socket
     server_socket.listen(LISTENER_COUNT)
+    print("Listening on {}".format(socket.gethostbyname(socket.gethostname())))
     return server_socket
 
 
@@ -81,28 +82,46 @@ def handle_client(sock, address):
     with sock:
         # do the following for each connection
         print("Handling {}".format(address))
-        files = netutils.recv_file_list(sock)["files"]
-        missing = fileutils.get_missing_files(files)
-        not_missing = [f for f in files if f not in missing]
-        inform_missing(sock, missing)
-        inform_checksums(sock, not_missing)
+        # use IP address of client as dirname for their code
+        root = str(address[0])
+        fileutils.make_directory(root)
 
-        try:
+        files = netutils.recv_file_list(sock)["files"]
+        # determine which files the server is missing
+        missing = fileutils.get_missing_files(files, root)
+        if DEBUG:
+            print("Missing: {}".format("\n".join(missing)))
+        not_missing = list(set(files) - set(missing))
+        if DEBUG:
+            print("Have: {}".format("\n".join(missing)))
+        # inform the client of missing files and the checksums of existing files
+        inform_missing(sock, missing)
+        inform_checksums(sock, not_missing, root)
+
+        # receive the list of files the client is about to send
+        to_receive = set(netutils.recv_file_list(sock)["files"])
+        while len(to_receive) > 0:
             file = netutils.recv_file(sock)
-            while file["type"] == "file":
-                fileutils.write_file(file["name"], file["body"])
-                file = netutils.recv_file(sock)
-        except EOFError:
-            pass
+            if file["name"] not in to_receive:
+                print("Unexpected file: \"{}\"".format(file["name"]))
+            else:
+                print("Received file ({} bytes): \"{}\""
+                      .format(len(file["body"]), file["name"]))
+                fileutils.write_file(file["name"], file["body"], root)
+            to_receive.remove(file["name"])
+
+        # send confirmation to the client. TODO run client code
+        netutils.send_text(sock, "All files received, done.")
         fileutils.delete_extra_files(files)
+        print("All files received, done.")
 
 
 def inform_missing(sock, files):
     netutils.send_file_list(sock, files)
 
 
-def inform_checksums(sock, filenames):
-    checksums = [fileutils.file_checksum(f) for f in filenames]
+def inform_checksums(sock, filenames, root):
+    checksums = [fileutils.file_checksum(f, root) for f in filenames]
     netutils.send_file_list(sock, filenames, checksums)
 
 

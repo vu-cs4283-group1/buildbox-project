@@ -24,47 +24,51 @@ def net_path(path):
     return path.replace(slash, "/")
 
 
-def get_contents(path):
+def get_contents(path, root):
+    path = root + slash + path
     with open(os_path(path), "rb") as file:
         return file.read()
 
 
-def write_file(path, contents):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+def make_directory(path):
+    os.makedirs(path, exist_ok=True)
+
+
+def write_file(path, contents, root):
+    path = root + slash + path
+    make_directory(os.path.dirname(path))
     with open(os_path(path), "wb") as file:
         file.write(contents)
 
 
-def file_checksum(path):
-    return hashlib.md5(get_contents(path)).hexdigest()
+def file_checksum(path, root):
+    return hashlib.md5(get_contents(path, root)).hexdigest()
 
 
-def list_all_files(path = BUILD_DIR):
+def list_all_files(root):
     local_files = []
-    for path, dirs, files in os.walk(os_path(path), followlinks=True):
+    for path, dirs, files in os.walk(os_path(root), followlinks=False):
         for file in files:
-            local_files.append(net_path(path) + "/" + file)
+            local_files.append(net_path(path) + slash + file)
     return local_files
 
 
 def delete_extra_files(files):
     local_files = list_all_files(BUILD_DIR)
-    extra = [f for f in local_files if f not in files]
+    extra = set(local_files) - set(files)
     for f in extra:
         os.remove(f)
 
 
-def get_missing_files(files):
-    on_disk = list_all_files()
-    missing = [f for f in files if f not in on_disk]
+def get_missing_files(files, root):
+    on_disk = list_all_files(root)
+    missing = list(set(files) - set(on_disk))
     return missing
 
 
-def verify_checksums(files, checksums):
+def verify_checksums(files, checksums, root):
     # filters out unchanged files and returns a list of files
     # whose checksums differ from disk
-    changed = []
-    for f, checksum in zip(files, checksums):
-        if file_checksum(f) != checksum:
-            changed.append(f)
+    changed = [f for f, checksum in zip(files, checksums)
+               if file_checksum(f, root) != checksum]
     return changed
