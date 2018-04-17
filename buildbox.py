@@ -12,7 +12,7 @@ def main():
     console_args = parse()
     if console_args.mode == "client":
         import client
-        return client.run(console_args.host)
+        return client.run(console_args.host, console_args.root)
     else:
         import server
         return server.run()
@@ -28,6 +28,8 @@ def parse():
     subparsers = parser.add_subparsers(title="modes", dest="mode")
     client_parser = subparsers.add_parser("client")
     client_parser.add_argument("host", help="the host running buildbox in server mode")
+    client_parser.add_argument("-r", "--root", help="the directory to synchronize",
+                               default=".")
     server_parser = subparsers.add_parser("server")
     return parser.parse_args()
 

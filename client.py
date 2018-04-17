@@ -13,7 +13,7 @@ TIMEOUT = 60.0
 PORT = 0xBDB0  # for buildbox, just for kicks
 
 
-def run(host):
+def run(host, root):
     """The entry point for client mode.
 
     Protocol:
@@ -25,7 +25,6 @@ def run(host):
     * client sends all missing and changed files
     * client receives a single message with relevant data
     """
-    root = "."  # the directory to synchronize
     sock = connect(host)
     with sock:
         # inform the server of local files
