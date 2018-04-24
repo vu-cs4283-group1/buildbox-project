@@ -108,12 +108,14 @@ def handle_client(sock, address):
                       .format(len(file["body"]), file["name"]))
                 fileutils.write_file(file["name"], file["body"], root)
             to_receive.remove(file["name"])
+        # delete other files
+        extra = fileutils.delete_extra_files(files, root)
+        for e in extra:
+            print("Deleted file: \"{}\"".format(e))
+        print("All files received, done.")
 
         # send confirmation to the client. TODO run client code
         netutils.send_text(sock, "All files received, done.")
-
-        fileutils.delete_extra_files(files)
-        print("All files received, done.")
 
 
 def inform_missing(sock, files):

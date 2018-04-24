@@ -11,8 +11,6 @@ import os
 import hashlib
 
 
-BUILD_DIR = "buildtest"
-
 slash = "\\" if os.name == "nt" else "/"
 
 
@@ -53,11 +51,12 @@ def list_all_files(root):
     return local_files
 
 
-def delete_extra_files(files):
-    local_files = list_all_files(BUILD_DIR)
+def delete_extra_files(files, root):
+    local_files = list_all_files(root)
     extra = set(local_files) - set(files)
     for f in extra:
         os.remove(f)
+    return extra
 
 
 def get_missing_files(files, root):
