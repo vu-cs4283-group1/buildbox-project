@@ -53,7 +53,8 @@ def list_all_files(root):
 
 def delete_extra_files(files, root):
     local_files = list_all_files(root)
-    extra = set(local_files) - set(files)
+    root_files = [str(root) + "/" + i for i in files]
+    extra = set(local_files) - set(root_files)
     for f in extra:
         os.remove(f)
     return extra
@@ -61,7 +62,10 @@ def delete_extra_files(files, root):
 
 def get_missing_files(files, root):
     on_disk = list_all_files(root)
+    root_files = [str(root) + "/" + i for i in files]
     missing = list(set(files) - set(on_disk))
+    # print(list(set(root_files) - set(on_disk)))
+    # print(on_disk)
     return missing
 
 

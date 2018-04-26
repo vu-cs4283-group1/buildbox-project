@@ -9,11 +9,14 @@ import socket
 import threading
 import netutils
 import fileutils
+import os                       # find os type
+from subprocess import call     # run shell commands
+import json                     # import json file
 
 TIMEOUT = 60.0
 PORT = 0xBDB0  # for buildbox, just for kicks
 LISTENER_COUNT = 5
-
+COMMANDS_FILE_NAME = "buildbox.json"
 
 def run():
     """The entry point for server mode."""
@@ -115,7 +118,29 @@ def handle_client(sock, address):
         print("All files received, done.")
 
         # send confirmation to the client. TODO run client code
-        netutils.send_text(sock, "All files received, done.")
+        netutils.send_text(sock, "All files received.")
+
+        # run commands provided in the COMMANDS_FILE_NAME file
+        run_command(COMMANDS_FILE_NAME)
+
+
+def run_command(file_name):
+    my_os_name = os.name
+
+    # Open JSON file
+    with open(file_name, 'r') as f:
+        list_of_commands = json.load(f)
+
+    # Only supports Unix and Windows
+    if my_os_name == "posix" or my_os_name == "nt":
+        # Run commands
+        for cmd in list_of_commands[my_os_name]["commands"]:
+            ret_val = call(cmd)
+            if ret_val:
+                print("@Error: The command " + str(cmd) + " not found")
+                return
+    else:
+        print("@Error: Platform not supported")
 
 
 def inform_missing(sock, files):
