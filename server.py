@@ -7,22 +7,24 @@
 
 import socket
 import threading
+import os                       # find os type
+# from subprocess import call     # run shell commands
+import json                     # import json file
+
 import netutils
 import fileutils
-import os                       # find os type
-from subprocess import call     # run shell commands
-import json                     # import json file
+import commands
+
 
 TIMEOUT = 60.0
 PORT = 0xBDB0  # for buildbox, just for kicks
 LISTENER_COUNT = 5
-COMMANDS_FILE_NAME = "buildbox.json"
 
-def run():
+
+def run(s_args):
     """The entry point for server mode."""
-
     server_socket = setup()
-    start(server_socket)
+    start(server_socket, s_args)
 
 
 def setup():
@@ -45,7 +47,7 @@ def setup():
     return server_socket
 
 
-def start(server_socket):
+def start(server_socket, s_args):
     """Continually wait for, accept, and handle connections from clients."""
 
     try:
@@ -56,25 +58,28 @@ def start(server_socket):
             client_socket.settimeout(TIMEOUT)
             client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             # let handle_client() handle the request
-            ct = threading.Thread(target=handle_client, args=(client_socket, address))
+            ct = threading.Thread(target=handle_client, args=(client_socket, address, s_args))
             ct.start()
     except KeyboardInterrupt:
         # safely allow threads to continue their work (this shouldn't take long)
         if threading.activeCount() > 1:
-            print("\n*** Stopping server...")
+            if not s_args.quiet:
+                print("\n*** Stopping server...")
             for t in threading.enumerate():
                 if t is not threading.currentThread():
                     t.join(TIMEOUT)
-        print("\n*** Server stopped successfully.")
+        if not s_args.quiet:
+            print("\n*** Server stopped successfully.")
     finally:
         server_socket.close()
 
 
-def handle_client(sock, address):
+def handle_client(sock, address, s_args):
     """The function that handles each individual connection.
 
     Protocol:
     * on connection server does nothing.
+    * on receiving a set of client command line arguments, store them
     * on receiving a file list, server returns 2 things in this order
         - a list of missing files
         - checksums for existing files
@@ -86,15 +91,20 @@ def handle_client(sock, address):
 
     with sock:
         # do the following for each connection
-        print("Handling {}".format(address))
+        if not s_args.quiet:
+            print("Handling {}".format(address))
         # use IP address of client as dirname for their code
         root = str(address[0])
-        fileutils.make_directory(root)
 
+        # get the client's command line arguments, keep c_args, s_args separate
+        c_args = netutils.recv_args(sock)
+        # get a list of the files in the clients specified directory
         files = netutils.recv_file_list(sock)["files"]
         # determine which files the server is missing
         missing = fileutils.get_missing_files(files, root)
         not_missing = list(set(files) - set(missing))
+        # determine which files should be deleted
+        extra = fileutils.get_extra_files(files, root)
         # inform the client of missing files and the checksums of existing files
         inform_missing(sock, missing)
         # send checksums of existing files
@@ -105,42 +115,43 @@ def handle_client(sock, address):
         while len(to_receive) > 0:
             file = netutils.recv_file(sock)
             if file["name"] not in to_receive:
-                print("Unexpected file: \"{}\"".format(file["name"]))
+                if not s_args.quiet:
+                    print("Unexpected file: \"{}\"".format(file["name"]))
             else:
-                print("Received file ({} bytes): \"{}\""
-                      .format(len(file["body"]), file["name"]))
-                fileutils.write_file(file["name"], file["body"], root)
+                if not s_args.quiet:
+                    print("Received file ({} bytes): \"{}\""
+                          .format(len(file["body"]), file["name"]))
+                if not c_args.dry_run:
+                    fileutils.write_file(file["name"], file["body"], root)
             to_receive.remove(file["name"])
-        # delete other files
-        extra = fileutils.delete_extra_files(files, root)
         for e in extra:
-            print("Deleted file: \"{}\"".format(e))
-        print("All files received, done.")
+            if not s_args.quiet:
+                print("Deleted file: \"{}\"".format(e))
+            if not c_args.dry_run:
+                fileutils.delete_file(e)
 
-        # send confirmation to the client. TODO run client code
-        netutils.send_text(sock, "All files received.")
+        # send confirmation to the client.
+        reply = "".join(["All files received.\n",
+                         "Building.\n" if not c_args.no_build else ""])
+        if not s_args.quiet:
+            print(reply)
+        netutils.send_text(sock, "".join(reply))
 
-        # run commands provided in the COMMANDS_FILE_NAME file
-        run_command(COMMANDS_FILE_NAME)
-
-
-def run_command(file_name):
-    my_os_name = os.name
-
-    # Open JSON file
-    with open(file_name, 'r') as f:
-        list_of_commands = json.load(f)
-
-    # Only supports Unix and Windows
-    if my_os_name == "posix" or my_os_name == "nt":
-        # Run commands
-        for cmd in list_of_commands[my_os_name]["commands"]:
-            ret_val = call(cmd)
-            if ret_val:
-                print("@Error: The command " + str(cmd) + " not found")
-                return
-    else:
-        print("@Error: Platform not supported")
+        if not c_args.no_build and not c_args.dry_run:
+            # build the code and send information to the client
+            try:
+                return_code, output = commands.run(fileutils.os_path(
+                    root + "/" + s_args.file))
+            except ValueError as v:
+                errmsg = v.args[0]
+                if not s_args.quiet:
+                    print(errmsg)
+                netutils.send_text(sock, errmsg)
+            else:
+                if not s_args.quiet:
+                    print(output)
+                # send the build output to the client
+                netutils.send_text(sock, output)
 
 
 def inform_missing(sock, files):

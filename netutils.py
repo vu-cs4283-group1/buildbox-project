@@ -10,6 +10,7 @@
 
 import json
 import socket
+import argparse
 
 
 def recvall(sock, n) -> bytes:
@@ -73,8 +74,20 @@ def recv_with_header(sock):
     return header, body
 
 
+def send_args(sock, args: argparse.Namespace):
+    """Use send_with_header to send the argparse module's Namespace class"""
+    args_dict = vars(args)  # turn argparse.Namespace into dict
+    metadata = {
+        "type": "args"
+    }
+    header = json.dumps(metadata).encode("utf-8")
+    body = json.dumps(args_dict).encode("utf-8")
+    send_with_header(sock, header, body)
+
+
 def send_file(sock, filename, checksum=None):
     """Use send_with_header to send a file's name, checksum, and contents."""
+
     with open(filename, "rb") as file:  # read binary
         body = file.read()
     metadata = {
@@ -82,7 +95,7 @@ def send_file(sock, filename, checksum=None):
         "name": filename,
         "checksum": checksum
     }
-    header = json.dumps(metadata).encode('utf-8')
+    header = json.dumps(metadata).encode("utf-8")
     send_with_header(sock, header, body)
 
 
@@ -96,29 +109,35 @@ def send_file_list(sock, filelist, checksumlist=None):
         "files": filelist,
         "checksums": checksumlist
     }
-    header = json.dumps(metadata).encode('utf-8')
+    header = json.dumps(metadata).encode("utf-8")
     send_with_header(sock, header)
 
 
-def send_text(sock, text : str):
+def send_text(sock, text: (str, bytes)):
     metadata = {
         "type": "text"
     }
-    header = json.dumps(metadata).encode('utf-8')
-    body = text.encode('utf-8')
+    header = json.dumps(metadata).encode("utf-8")
+    if isinstance(text, str):
+        body = text.encode("utf-8")
+    else:
+        body = text
     send_with_header(sock, header, body)
 
 
-def recv_unknown(sock):
-    #for use when program can recv one of several things
+def recv_args(sock) -> argparse.Namespace:
     header, body = recv_with_header(sock)
     metadata = json.loads(header.decode("utf-8"))
-    metadata["body"] = body
-    return metadata
+    if metadata["type"] != "args":
+        raise ValueError("Expected args, got {}".format(metadata["type"]))
+    args_dict = json.loads(body.decode("utf-8"))
+    args = argparse.Namespace()
+    args.__dict__.update(args_dict)  # turn dict into argparse.Namespace
+    return args
 
 
 def recv_file(sock):
-    "Use recv_with_header to receive a file's name, checksum, and contents."
+    """Use recv_with_header to receive a file's name, checksum, and contents."""
     header, body = recv_with_header(sock)
     metadata = json.loads(header.decode("utf-8"))
     if metadata["type"] != "file":  # type field should be guaranteed
@@ -147,11 +166,11 @@ def recv_file_checksums(sock):
     return metadata
 
 
-def recv_text(sock):
+def recv_text(sock) -> str:
     """Use recv_with_header to receive plain text."""
     header, body = recv_with_header(sock)
-    metadata = json.loads(header.decode('utf-8'))
+    metadata = json.loads(header.decode("utf-8"))
     if metadata["type"] != "text":
         raise ValueError("Expected text, got {}".format(metadata["type"]))
     # return a str, unlike most other recv_* methods
-    return body.decode('utf-8')
+    return body.decode("utf-8")

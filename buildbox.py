@@ -12,25 +12,37 @@ def main():
     console_args = parse()
     if console_args.mode == "client":
         import client
-        return client.run(console_args.host, console_args.root)
+        return client.run(console_args)
     else:
         import server
-        return server.run()
+        return server.run(console_args)
 
 
 def parse():
     """Interpret the command line arguments and offer help to the user.
 
-    True if this is a client, false if this is a server.
+    The mode field of the returned object is either "client" or "server".
     """
-    # ensure the command line arguments are correct and place them in console_args
     parser = argparse.ArgumentParser(add_help=True)
     subparsers = parser.add_subparsers(title="modes", dest="mode")
+
     client_parser = subparsers.add_parser("client")
     client_parser.add_argument("host", help="the host running buildbox in server mode")
-    client_parser.add_argument("-r", "--root", help="the directory to synchronize",
-                               default=".")
+    client_parser.add_argument("-r", "--root", default=".",
+                               help="the directory to synchronize")
+    client_parser.add_argument("-q", "--quiet", action="store_true",
+                               help="suppress output information")
+    client_parser.add_argument("-d", "--dry-run", action="store_true",
+                               help="do not alter the server's state")
+    client_parser.add_argument("-n", "--no-build", action="store_true",
+                               help="synchronize files but do not run commands")
+
     server_parser = subparsers.add_parser("server")
+    server_parser.add_argument("-q", "--quiet", action="store_true",
+                               help="suppress output information")
+    server_parser.add_argument("-f", "--file", default="buildbox.json",
+                               help="the JSON config file to use (default buildbox.json)")
+
     return parser.parse_args()
 
 

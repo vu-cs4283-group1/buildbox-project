@@ -13,11 +13,12 @@ TIMEOUT = 60.0
 PORT = 0xBDB0  # for buildbox, just for kicks
 
 
-def run(host, root):
+def run(console_args):
     """The entry point for client mode.
 
     Protocol:
-    * on connection client sends a file list
+    * on connection client sends its command line arguments
+    * client sends a list of all files in the directory 'root'
     * client receives 2 things in this order
         - a list of missing files
         - checksums for existing files
@@ -25,8 +26,12 @@ def run(host, root):
     * client sends all missing and changed files
     * client receives a single message with relevant data
     """
+    host = console_args.host
+    root = console_args.root
     sock = connect(host)
     with sock:
+        # inform the server of the given command line arguments
+        netutils.send_args(sock, console_args)
         # inform the server of local files
         inform_locals(sock, root)
         # determine which files the server is missing
@@ -44,6 +49,9 @@ def run(host, root):
 
         # display the final response from the server
         print("remote:", netutils.recv_text(sock))
+        if not console_args.no_build:
+            output = netutils.recv_text(sock)
+            print(output)
 
 
 def connect(host):
