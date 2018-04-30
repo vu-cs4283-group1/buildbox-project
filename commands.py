@@ -7,6 +7,7 @@
 #     unauthorized aid on this assignment.
 #
 
+import fileutils
 import json
 import shlex
 import subprocess
@@ -16,7 +17,7 @@ import time
 TIMEOUT = 30
 
 
-def run(conf_filename):
+def run(conf_filename, root):
     """Runs all of the commands stored in the configuration file and stores
     their resulting return codes and textual outputs.
 
@@ -25,17 +26,18 @@ def run(conf_filename):
     for any reason, a ValueError is raised. Commands are split with shell rules
     but are not executed in any shell.
     """
-    parsed = parse_conf_file(conf_filename)
+    parsed = parse_conf_file(conf_filename, root)
     if isinstance(parsed, str):  # describes an error that occurred
         raise ValueError(parsed)
     assert isinstance(parsed, dict)
-    return execute_all(parsed["commands"])
+    return execute_all(parsed["commands"], root)
 
 
-def parse_conf_file(conf_filename):
+def parse_conf_file(conf_filename, root):
     required_elements = ["commands"]  # extend when more json elements are required
+    root_filename = fileutils.os_path("{}/{}".format(root,conf_filename))
     try:
-        with open(conf_filename, "r") as conf_file:
+        with open(root_filename, "r") as conf_file:
             try:
                 conf = json.load(conf_file)
             except json.decoder.JSONDecodeError:
@@ -53,7 +55,7 @@ def parse_conf_file(conf_filename):
     return os_conf
 
 
-def execute_all(command_list):
+def execute_all(command_list, root):
     return_code = 0
     output = []
     started = time.clock()
@@ -61,7 +63,7 @@ def execute_all(command_list):
         # include the command itself in the output
         output.append("$ {}\n".format(command).encode("utf-8"))
         # run the command and record its return code and output
-        return_code, stdout = execute_command(command)
+        return_code, stdout = execute_command(command, root)
         output.append(stdout)
         if return_code != 0:
             break
@@ -76,21 +78,23 @@ def execute_all(command_list):
     return return_code, b"".join(output)
 
 
-def execute_command(command):
+def execute_command(command, root):
     # split the command into a list using posix shell rules
-    command = shlex.split(command)
+    command = [c.encode("utf-8") for c in shlex.split(command)]
+    executable = command[0]
     if len(command) == 0:
         return 0, b""
     try:
-        # synchronously run the given command with a long timeout
+        # synchronously run the given command
         result = subprocess.run(command,
                                 stdout=subprocess.PIPE,  # record output
                                 stderr=subprocess.STDOUT,  # merge stderr, stdout
-                                timeout=TIMEOUT)
+                                timeout=TIMEOUT,  # run with a long timeout
+                                cwd=root)  # run the executable in the client dir
     except FileNotFoundError:
-        return 127, "{}: Command not found.\n".format(command[0].encode("utf-8"))
+        return 127, "{}: Command not found.\n".format(executable)
     except PermissionError:
-        return 126, "{}: Permission denied.\n".format(command[0].encode("utf-8"))
+        return 126, "{}: Permission denied.\n".format(executable)
     except subprocess.TimeoutExpired:
         # standard unix timeout exit code, message
         return 124, "{}: Timed out.\n".format(command[0]).encode("utf-8")

@@ -92,7 +92,7 @@ def handle_client(sock, address, s_args):
     with sock:
         # do the following for each connection
         if not s_args.quiet:
-            print("Handling {}".format(address))
+            print("-------------------\nHandling {}".format(address))
         # use IP address of client as dirname for their code
         root = str(address[0])
 
@@ -131,17 +131,17 @@ def handle_client(sock, address, s_args):
                 fileutils.delete_file(e)
 
         # send confirmation to the client.
+        do_build = not c_args.no_build and not c_args.dry_run
         reply = "".join(["All files received.\n",
-                         "Building.\n" if not c_args.no_build else ""])
+                         "Building.\n" if do_build else ""])
         if not s_args.quiet:
             print(reply)
         netutils.send_text(sock, "".join(reply))
 
-        if not c_args.no_build and not c_args.dry_run:
+        if do_build:
             # build the code and send information to the client
             try:
-                return_code, output = commands.run(fileutils.os_path(
-                    root + "/" + s_args.file))
+                return_code, output = commands.run(s_args.file, root)
             except ValueError as v:
                 errmsg = v.args[0]
                 if not s_args.quiet:
@@ -149,7 +149,7 @@ def handle_client(sock, address, s_args):
                 netutils.send_text(sock, errmsg)
             else:
                 if not s_args.quiet:
-                    print(output)
+                    print(output.decode("utf-8"))
                 # send the build output to the client
                 netutils.send_text(sock, output)
 
