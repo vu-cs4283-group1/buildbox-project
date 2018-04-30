@@ -7,6 +7,7 @@
 #
 # Description: This file includes utility functions for interacting with the filesystem
 
+# TODO call list_all_files once, pass result into other functions
 import os
 import hashlib
 
@@ -32,11 +33,16 @@ def make_directory(path):
     os.makedirs(path, exist_ok=True)
 
 
-def write_file(path, contents, root):
-    path = root + slash + path
-    make_directory(os.path.dirname(path))
-    with open(os_path(path), "wb") as file:
-        file.write(contents)
+def write_file(file, contents, root):
+    file = root + slash + file
+    make_directory(os.path.dirname(file))
+    with open(os_path(file), "wb") as f:
+        f.write(contents)
+
+
+def delete_file(file, root):
+    file = root + slash + file
+    os.remove(file)
 
 
 def file_checksum(path, root):
@@ -44,31 +50,19 @@ def file_checksum(path, root):
 
 
 def list_all_files(root):
+    """This function returns all files under the root path, *making sure* not
+    to actually include the root part of the path. This is important to enable
+    comparing files on two machines where the root parts of the path may differ.
+
+    Ex. Given A/b.txt, A/c.txt, A/D/e.txt, list_all_files(A) returns
+    [b.txt, c.txt, D/e.txt].
+    """
     local_files = []
     for path, dirs, files in os.walk(os_path(root), followlinks=False):
-        for file in files:
-            local_files.append(net_path(path) + slash + file)
+        if len(files) > 0:
+            path_wo_root = path[(len(root) + len(slash)):]  # remove root part
+            local_files.extend([os.path.join(path_wo_root, f) for f in files])
     return local_files
-
-
-def get_extra_files(files, root):
-    local_files = list_all_files(root)
-    root_files = [str(root) + slash + i for i in files]
-    extra = set(local_files) - set(root_files)
-    return extra
-
-
-def delete_file(file):
-    os.remove(file)
-
-
-def get_missing_files(files, root):
-    on_disk = list_all_files(root)
-    root_files = [str(root) + slash + i for i in files]
-    missing = list(set(files) - set(on_disk))
-    # print(list(set(root_files) - set(on_disk)))
-    # print(on_disk)
-    return missing
 
 
 def verify_checksums(files, checksums, root):

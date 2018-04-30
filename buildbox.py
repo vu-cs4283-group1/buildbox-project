@@ -11,6 +11,8 @@ import argparse
 def main():
     console_args = parse()
     if console_args.mode == "client":
+        if console_args.dry_run:
+            console_args.no_build = True  # --dry-run implies --no-build
         import client
         return client.run(console_args)
     else:

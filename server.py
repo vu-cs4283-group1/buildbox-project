@@ -98,71 +98,85 @@ def handle_client(sock, address, s_args):
 
         # get the client's command line arguments, keep c_args, s_args separate
         c_args = netutils.recv_args(sock)
-        # get a list of the files in the clients specified directory
-        files = netutils.recv_file_list(sock)["files"]
-        # determine which files the server is missing
-        missing = fileutils.get_missing_files(files, root)
-        not_missing = list(set(files) - set(missing))
-        # determine which files should be deleted
-        extra = fileutils.get_extra_files(files, root)
-        # inform the client of missing files and the checksums of existing files
-        inform_missing(sock, missing)
-        # send checksums of existing files
-        inform_checksums(sock, not_missing, root)
+        # get a list of the files in the client's specified directory
+        c_files = netutils.recv_file_list(sock)["files"]
+        # get a list of the files in the server's root directory
+        s_files = fileutils.list_all_files(root)
 
-        # receive the list of files the client is about to send
-        to_receive = set(netutils.recv_file_list(sock)["files"])
-        while len(to_receive) > 0:
-            file = netutils.recv_file(sock)
-            if file["name"] not in to_receive:
-                if not s_args.quiet:
-                    print("Unexpected file: \"{}\"".format(file["name"]))
-            else:
-                if not s_args.quiet:
-                    print("Received file ({} bytes): \"{}\""
-                          .format(len(file["body"]), file["name"]))
-                if not c_args.dry_run:
-                    fileutils.write_file(file["name"], file["body"], root)
-            to_receive.remove(file["name"])
-        for e in extra:
-            if not s_args.quiet:
-                print("Deleted file: \"{}\"".format(e))
-            if not c_args.dry_run:
-                fileutils.delete_file(e)
+        # determine which files the server is missing and which should be deleted
+        not_missing, missing, extra = categorize_files(c_files, s_files)
+        # inform the client of missing files and the checksums of existing files
+        netutils.send_file_list(sock, missing)
+        # send checksums of existing files
+        checksums = [fileutils.file_checksum(f, root) for f in not_missing]
+        netutils.send_file_list(sock, not_missing, checksums)
+
+        # receive the actual files from the client
+        receive_files(sock, s_args, c_args, root)
+
+        # remove unnecessary files
+        remove_extra_files(extra, s_args, c_args, root)
 
         # send confirmation to the client.
-        do_build = not c_args.no_build and not c_args.dry_run
-        reply = "".join(["All files received.\n",
-                         "Building.\n" if do_build else ""])
+        reply = "All files received.\n"
+        if not c_args.no_build:
+            reply += "Building.\n"
         if not s_args.quiet:
             print(reply)
-        netutils.send_text(sock, "".join(reply))
+        netutils.send_text(sock, reply)
 
-        if do_build:
-            # build the code and send information to the client
-            try:
-                return_code, output = commands.run(s_args.file, root)
-            except ValueError as v:
-                errmsg = v.args[0]
-                if not s_args.quiet:
-                    print(errmsg)
-                netutils.send_text(sock, errmsg)
-            else:
-                if not s_args.quiet:
-                    print(output.decode("utf-8"))
-                # send the build output to the client
-                netutils.send_text(sock, output)
+        # run the build
+        if not c_args.no_build:
+            do_build(sock, s_args, root)
+        if not s_args.quiet:
+            print("-------------------")
 
 
-def inform_missing(sock, files):
-    netutils.send_file_list(sock, files)
+def receive_files(sock, s_args, c_args, root):
+    # receive the list of files the client is about to send
+    to_receive = set(netutils.recv_file_list(sock)["files"])
+    while len(to_receive) > 0:
+        file = netutils.recv_file(sock)
+        if file["name"] not in to_receive:
+            if not s_args.quiet:
+                print("Unexpected file: \"{}\"".format(file["name"]))
+        else:
+            if not s_args.quiet:
+                print("Received file ({} bytes): \"{}\""
+                      .format(len(file["body"]), file["name"]))
+            if not c_args.dry_run:
+                fileutils.write_file(file["name"], file["body"], root)
+        to_receive.remove(file["name"])
 
 
-def inform_checksums(sock, filenames, root):
-    checksums = [fileutils.file_checksum(f, root) for f in filenames]
-    netutils.send_file_list(sock, filenames, checksums)
+def remove_extra_files(extra, s_args, c_args, root):
+    for e in extra:
+        if not s_args.quiet:
+            print("Deleted file: \"{}\"".format(e))
+        if not c_args.dry_run:
+            fileutils.delete_file(e, root)
 
 
-def recv_filenames(sock):
-    data = netutils.recv_file_list(sock)
-    return data["files"]
+def do_build(sock, s_args, root):
+    # build the code and send information to the client
+    try:
+        return_code, output = commands.run(s_args.file, root)
+    except ValueError as v:
+        errmsg = v.args[0]
+        if not s_args.quiet:
+            print(errmsg)
+        netutils.send_text(sock, errmsg)
+    else:
+        if not s_args.quiet:
+            print(output.decode("utf-8"))
+        # send the build output to the client
+        netutils.send_text(sock, output)
+
+
+def categorize_files(c_files, s_files):
+    c_files = set(c_files)
+    s_files = set(s_files)
+    not_missing = list(c_files & s_files)  # files on both computers
+    missing = list(c_files - s_files)  # files on the client but not server
+    extra = list(s_files - c_files)  # files on the server but not client
+    return not_missing, missing, extra
