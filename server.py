@@ -7,9 +7,6 @@
 
 import socket
 import threading
-import os                       # find os type
-# from subprocess import call     # run shell commands
-import json                     # import json file
 
 import netutils
 import fileutils
@@ -43,7 +40,9 @@ def setup():
         raise
     # become a server socket
     server_socket.listen(LISTENER_COUNT)
-    print("Listening on {}".format(socket.gethostbyname(socket.gethostname())))
+    hostname = socket.gethostname()
+    host_ip = socket.gethostbyname(hostname)
+    print("Listening on {} ({})".format(hostname, host_ip))
     return server_socket
 
 
@@ -112,29 +111,31 @@ def handle_client(sock, address, s_args):
         netutils.send_file_list(sock, not_missing, checksums)
 
         # receive the actual files from the client
-        receive_files(sock, s_args, c_args, root)
+        num_received = receive_files(sock, s_args, c_args, root)
 
         # remove unnecessary files
         remove_extra_files(extra, s_args, c_args, root)
 
         # send confirmation to the client.
-        reply = "All files received.\n"
-        if not c_args.no_build:
-            reply += "Building.\n"
+        reply = get_reply(num_received, len(extra), c_args)
         if not s_args.quiet:
             print(reply)
         netutils.send_text(sock, reply)
 
         # run the build
         if not c_args.no_build:
-            do_build(sock, s_args, root)
+            output = do_build(s_args, root)
+            # send the build output to the client
+            netutils.send_text(sock, output)
         if not s_args.quiet:
             print("-------------------")
 
 
 def receive_files(sock, s_args, c_args, root):
-    # receive the list of files the client is about to send
+    """Receive the list of files the client is about to send."""
+
     to_receive = set(netutils.recv_file_list(sock)["files"])
+    num_to_receive = len(to_receive)
     while len(to_receive) > 0:
         file = netutils.recv_file(sock)
         if file["name"] not in to_receive:
@@ -147,36 +148,57 @@ def receive_files(sock, s_args, c_args, root):
             if not c_args.dry_run:
                 fileutils.write_file(file["name"], file["body"], root)
         to_receive.remove(file["name"])
+    return num_to_receive
 
 
 def remove_extra_files(extra, s_args, c_args, root):
+    """Removes a set of extraneous files and prunes empty directories."""
+
     for e in extra:
         if not s_args.quiet:
             print("Deleted file: \"{}\"".format(e))
         if not c_args.dry_run:
             fileutils.delete_file(e, root)
+    if not c_args.dry_run:
+        fileutils.remove_empty_dirs(root)
 
 
-def do_build(sock, s_args, root):
-    # build the code and send information to the client
+def do_build(s_args, root):
+    """Build the code and return error or output information."""
+
     try:
         return_code, output = commands.run(s_args.file, root)
     except ValueError as v:
-        errmsg = v.args[0]
+        errmsg = v.args[0]  # a human-readable description of the error
         if not s_args.quiet:
             print(errmsg)
-        netutils.send_text(sock, errmsg)
+        return errmsg
     else:
         if not s_args.quiet:
             print(output.decode("utf-8"))
-        # send the build output to the client
-        netutils.send_text(sock, output)
+        return output
 
 
 def categorize_files(c_files, s_files):
+    """Given lists of the files that reside on the client's and server's root
+    directories, determine which files exist on one, the other, or both.
+    """
     c_files = set(c_files)
     s_files = set(s_files)
     not_missing = list(c_files & s_files)  # files on both computers
     missing = list(c_files - s_files)  # files on the client but not server
     extra = list(s_files - c_files)  # files on the server but not client
     return not_missing, missing, extra
+
+
+def get_reply(received: int, removed: int, c_args) -> str:
+    """Return a human-readable reply summarizing the file transfer."""
+    
+    reply = []
+    if received + removed > 0:
+        reply.append("{} files received, {} files removed.".format(received, removed))
+    else:
+        reply.append("All files up to date.")
+    if not c_args.no_build:
+        reply.append("\nBuilding.")
+    return "".join(reply)

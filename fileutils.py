@@ -7,10 +7,8 @@
 #
 # Description: This file includes utility functions for interacting with the filesystem
 
-# TODO call list_all_files once, pass result into other functions
-import os
 import hashlib
-
+import os
 
 slash = "\\" if os.name == "nt" else "/"
 
@@ -21,6 +19,10 @@ def os_path(path):
 
 def net_path(path):
     return path.replace(slash, "/")
+
+
+def convert_paths(path_list, fn):
+    return [fn(p) for p in path_list]
 
 
 def get_contents(path, root):
@@ -63,6 +65,18 @@ def list_all_files(root):
             path_wo_root = path[(len(root) + len(slash)):]  # remove root part
             local_files.extend([os.path.join(path_wo_root, f) for f in files])
     return local_files
+
+
+def remove_empty_dirs(root):
+    for path, _, _ in os.walk(os_path(root), topdown=False):  # bottom up
+        if path == root:
+            break
+        try:
+            os.rmdir(path)  # only removes empty directories
+        except OSError:
+            pass
+        else:
+            print("Removed dir {}".format(path))
 
 
 def verify_checksums(files, checksums, root):

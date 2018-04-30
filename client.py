@@ -6,6 +6,7 @@
 #     unauthorized aid on this assignment.
 
 import socket
+import textwrap
 import netutils
 import fileutils
 
@@ -35,24 +36,20 @@ def run(c_args):
         # inform the server of local files
         inform_locals(sock, root)
         # determine which files the server is missing
-        missing = netutils.recv_file_list(sock)["files"]
+        missing = recv_missing(sock)
         # determine which files are on the server but differ from the client
-        check = netutils.recv_file_checksums(sock)
-        changed = fileutils.verify_checksums(check["files"], check["checksums"], root)
+        changed = recv_changed(sock, root)
         # create and send a list of files to be sent
         to_send = missing + changed
-        netutils.send_file_list(sock, to_send)
+        netutils.send_file_list(sock, [fileutils.net_path(f) for f in to_send])
         # send the actual files, order doesn't matter
-        for file in to_send:
-            if not c_args.quiet:
-                print("Sending file:", file)
-            netutils.send_file(sock, file)
-
+        send_files(sock, to_send, c_args, root)
         # display the final response from the server
-        print("remote:", netutils.recv_text(sock))
+        print("remote:\n", textwrap.indent(netutils.recv_text(sock), "    "),
+              sep="")
         if not c_args.no_build and not c_args.dry_run:
-            output = netutils.recv_text(sock)
-            print(output)
+            print("remote:\n", textwrap.indent(netutils.recv_text(sock), "    "),
+                  sep="")
 
 
 def connect(host):
@@ -65,4 +62,32 @@ def connect(host):
 
 
 def inform_locals(sock, root):
-    netutils.send_file_list(sock, fileutils.list_all_files(root))
+    local_files = fileutils.list_all_files(root)
+    local_files = fileutils.convert_paths(local_files, fileutils.net_path)
+    netutils.send_file_list(sock, local_files)
+
+
+def recv_missing(sock):
+    missing = netutils.recv_file_list(sock)["files"]
+    missing = fileutils.convert_paths(missing, fileutils.os_path)
+    return missing
+
+
+def recv_changed(sock, root):
+    check = netutils.recv_file_checksums(sock)
+    check["files"] = fileutils.convert_paths(check["files"], fileutils.os_path)
+    changed = fileutils.verify_checksums(check["files"], check["checksums"], root)
+    return changed
+
+
+def inform_sending(sock, missing, changed):
+    to_send = missing + changed
+    netutils.send_file_list(sock, fileutils.convert_paths(to_send, fileutils.net_path))
+
+
+def send_files(sock, to_send, c_args, root):
+    for file in to_send:
+        if not c_args.quiet:
+            print("Sending file:", file)
+        netutils.send_file(sock, fileutils.net_path(file),
+                           body=fileutils.get_contents(file, root))

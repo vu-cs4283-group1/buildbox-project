@@ -1,0 +1,14 @@
+{
+  "posix": {
+    "commands": [
+      "echo Printing directory tree on server:",
+      "tree"
+    ]
+  },
+  "nt": {
+    "commands": [
+      "echo", "Hello!",
+      "echo", "World!"
+    ]
+  }
+}

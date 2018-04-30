@@ -85,11 +85,11 @@ def send_args(sock, args: argparse.Namespace):
     send_with_header(sock, header, body)
 
 
-def send_file(sock, filename, checksum=None):
+def send_file(sock, filename, body=None, checksum=None):
     """Use send_with_header to send a file's name, checksum, and contents."""
-
-    with open(filename, "rb") as file:  # read binary
-        body = file.read()
+    if body is None:
+        with open(filename, "rb") as file:  # read binary
+            body = file.read()
     metadata = {
         "type": "file",
         "name": filename,

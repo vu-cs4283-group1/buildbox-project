@@ -7,12 +7,13 @@
 #     unauthorized aid on this assignment.
 #
 
-import fileutils
 import json
+import os
 import shlex
 import subprocess
-import os
 import time
+
+import fileutils
 
 TIMEOUT = 30
 
@@ -70,20 +71,22 @@ def execute_all(command_list, root):
     elapsed = time.clock() - started
 
     if return_code == 0:
-        output.append("\nCommands finished successfully in {} seconds.\n"
-                      .format(round(elapsed, 6)).encode("utf-8"))
+        output.append("Commands finished successfully in {} seconds.\n"
+                      .format(round(elapsed, 6)))
     else:
-        output.append("\nCommands terminated with exit code {} in {} seconds.\n"
-                      .format(return_code, round(elapsed, 6)).encode("utf-8"))
+        output.append("Commands terminated with exit code {} in {} seconds.\n"
+                      .format(return_code, round(elapsed, 6)))
+    # convert any str objects to bytes objects
+    output = [o.encode("utf-8") if isinstance(o, str) else o for o in output]
     return return_code, b"".join(output)
 
 
 def execute_command(command, root):
     # split the command into a list using posix shell rules
-    command = [c.encode("utf-8") for c in shlex.split(command)]
+    command = shlex.split(command)
     executable = command[0]
     if len(command) == 0:
-        return 0, b""
+        return 0, ""
     try:
         # synchronously run the given command
         result = subprocess.run(command,
@@ -97,8 +100,8 @@ def execute_command(command, root):
         return 126, "{}: Permission denied.\n".format(executable)
     except subprocess.TimeoutExpired:
         # standard unix timeout exit code, message
-        return 124, "{}: Timed out.\n".format(command[0]).encode("utf-8")
+        return 124, "{}: Timed out.\n".format(command[0])
     except Exception:
-        return 1, "{}: Unknown error.\n".format(command[0]).encode("utf-8")
+        return 1, "{}: Unknown error.\n".format(command[0])
 
     return result.returncode, result.stdout  # returncode 0 on success
