@@ -1,9 +1,13 @@
 # Name:   Josh Wilson, Jerry Jung, Caleb Proffitt
-# Date:   <DATE>
+# Date:   30 April 2018
 # Course: CS 4283 - Vanderbilt University
 # Ver:    Python 3.6.4
 # Honor statement: We have neither given nor received
 #     unauthorized aid on this assignment.
+#
+# Description: This file implements the server side of our project.
+#     It listens for connections from clients, and, assigning each a
+#     separate directory, synchronizes files and runs given commands.
 
 import socket
 import threading
@@ -34,7 +38,7 @@ def setup():
         # bind the socket to any address the computer may have
         server_socket.bind(("", PORT))
     except Exception:
-        print("*** Failed to start server:")
+        print("Failed to start server:")
         if server_socket is not None:
             server_socket.close()
         raise
@@ -63,12 +67,12 @@ def start(server_socket, s_args):
         # safely allow threads to continue their work (this shouldn't take long)
         if threading.activeCount() > 1:
             if not s_args.quiet:
-                print("\n*** Stopping server...")
+                print("\nStopping server...")
             for t in threading.enumerate():
                 if t is not threading.currentThread():
                     t.join(TIMEOUT)
         if not s_args.quiet:
-            print("\n*** Server stopped successfully.")
+            print("\nServer stopped successfully.")
     finally:
         server_socket.close()
 
@@ -193,7 +197,7 @@ def categorize_files(c_files, s_files):
 
 def get_reply(received: int, removed: int, c_args) -> str:
     """Return a human-readable reply summarizing the file transfer."""
-    
+
     reply = []
     if received + removed > 0:
         reply.append("{} files received, {} files removed.".format(received, removed))

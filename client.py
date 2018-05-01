@@ -1,9 +1,14 @@
 # Name:   Josh Wilson, Jerry Jung, Caleb Proffitt
-# Date:   <DATE>
+# Date:   30 April 2018
 # Course: CS 4283 - Vanderbilt University
 # Ver:    Python 3.6.4
 # Honor statement: We have neither given nor received
 #     unauthorized aid on this assignment.
+#
+# Description: This file implements the client side of our project.
+#     It connects to a listening server, synchronizes files, and receives
+#     and displays build output if both --no-build and --dry-run are not
+#     specified.
 
 import socket
 import textwrap
@@ -47,7 +52,7 @@ def run(c_args):
         # display the final response from the server
         print("remote:\n", textwrap.indent(netutils.recv_text(sock), "    "),
               sep="")
-        if not c_args.no_build and not c_args.dry_run:
+        if not c_args.no_build:
             print("remote:\n", textwrap.indent(netutils.recv_text(sock), "    "),
                   sep="")
 

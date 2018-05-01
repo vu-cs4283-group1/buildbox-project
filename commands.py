@@ -1,11 +1,11 @@
-# Name:   Josh Wilson
-# Email:  joshua.wilson@vanderbilt.edu
-# Date:   15 March 2018
+# Name:   Josh Wilson, Jerry Jung, Caleb Proffitt
+# Date:   30 April 2018
 # Course: CS 4283 - Vanderbilt University
 # Ver:    Python 3.6.4
-# Honor statement: I have neither given nor received
+# Honor statement: We have neither given nor received
 #     unauthorized aid on this assignment.
 #
+# Description: This file contains functions to run commands and record output.
 
 import json
 import os
@@ -82,8 +82,9 @@ def execute_all(command_list, root):
 
 
 def execute_command(command, root):
-    # split the command into a list using posix shell rules
-    command = shlex.split(command)
+    # split the command into a list using posix shell rules, if not already a list
+    if isinstance(command, str):
+        command = shlex.split(command)
     executable = command[0]
     if len(command) == 0:
         return 0, ""

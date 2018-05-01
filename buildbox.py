@@ -1,9 +1,12 @@
 # Name:   Josh Wilson, Jerry Jung, Caleb Proffitt
-# Date:   <DATE>
+# Date:   29 April 2018
 # Course: CS 4283 - Vanderbilt University
 # Ver:    Python 3.6.4
 # Honor statement: We have neither given nor received
 #     unauthorized aid on this assignment.
+#
+# Description: This module is the entry point to our project. See
+#     buildbox.py client --help, buildbox.py server --help for details.
 
 import argparse
 
