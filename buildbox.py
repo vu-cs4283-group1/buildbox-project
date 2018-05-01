@@ -1,3 +1,4 @@
+#! /usr/bin/env python3
 # Name:   Josh Wilson, Jerry Jung, Caleb Proffitt
 # Date:   29 April 2018
 # Course: CS 4283 - Vanderbilt University
@@ -14,8 +15,7 @@ import argparse
 def main():
     console_args = parse()
     if console_args.mode == "client":
-        if console_args.dry_run:
-            console_args.no_build = True  # --dry-run implies --no-build
+
         import client
         return client.run(console_args)
     else:
@@ -29,7 +29,8 @@ def parse():
     The mode field of the returned object is either "client" or "server".
     """
     parser = argparse.ArgumentParser(add_help=True)
-    subparsers = parser.add_subparsers(title="modes", dest="mode")
+    subparsers = parser.add_subparsers(title="modes", dest="mode",
+                                       help="run in either client mode or server mode")
 
     client_parser = subparsers.add_parser("client")
     client_parser.add_argument("host", help="the host running buildbox in server mode")
@@ -48,7 +49,12 @@ def parse():
     server_parser.add_argument("-f", "--file", default="buildbox.json",
                                help="the JSON config file to use (default buildbox.json)")
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.mode not in ("client", "server"):
+        parser.error("Invalid mode. Specify one of {client,server}.")
+    if args.mode == "client" and args.dry_run:
+        args.no_build = True  # --dry-run implies --no-build
+    return args
 
 
 # run the "main" function
