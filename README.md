@@ -36,19 +36,19 @@ python buildbox.py client 127.0.0.1 --root buildtest
 
 ## Server arguments
 * -q OR --quiet
-+ Suppress output information
+Suppress output information
 * -f OR --file JSONFILE
-+ the JSON config file to use (default buildbox.json)
+The JSON config file to use (default buildbox.json)
 
 ## Client arguments
 * -r OR --root DIR
-+ The directory to synchronize (default .)
+The directory to synchronize (default .)
 * -q OR --quiet
-+ Suppress output information
+Suppress output information
 * -d OR --dry-run
-+ Do not alter the server's state
+Do not alter the server's state
 * -n OR --no-build
-+ Synchronize files but do not run commands
+Synchronize files but do not run commands
 
 ## Authors
 * Josh Wilson
