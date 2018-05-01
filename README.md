@@ -35,20 +35,32 @@ python buildbox.py client 127.0.0.1 --root buildtest
 * The second argument when running the client represents the host running buildbox in server mode (ex. 127.0.0.1)
 
 ## Server arguments
-* -q OR --quiet 
-Suppress output information
-* -f OR --file JSONFILE 
-The JSON config file to use (default buildbox.json)
+```
+python buildbox.py server -q
+```
+Suppress output information. Identical to --quiet
+```
+python buildbox.py server -f buildbox.json
+```
+The JSON config file to use (default buildbox.json). Identical to --file
 
 ## Client arguments
-* -r OR --root DIR 
-The directory to synchronize (default .)
-* -q OR --quiet 
-Suppress output information
-* -d OR --dry-run 
-Do not alter the server's state
-* -n OR --no-build 
-Synchronize files but do not run commands
+```
+python buildbox.py client 127.0.0.1 -r buildtest
+```
+The directory to synchronize (default .). Identical to --root
+```
+python buildbox.py client 127.0.0.1 -q
+```
+Suppress output information. Identical to --quiet
+```
+python buildbox.py client 127.0.0.1 -d
+```
+Do not alter the server's state. Identical to --dry-run
+```
+python buildbox.py client 127.0.0.1 -n
+```
+Synchronize files but do not run commands. Identical to --no-build
 
 ## Authors
 * Josh Wilson
